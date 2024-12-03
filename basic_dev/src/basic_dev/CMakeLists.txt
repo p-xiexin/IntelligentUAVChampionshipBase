@@ -8,7 +8,8 @@ project(basic_dev)
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
 set(OpenCV_DIR /usr/lib/x86_64-linux-gnu/cmake/opencv4/)
-
+set(pcl_conversions_DIR /usr/local/share/pcl_conversions/cmake)
+set(pcl_ros_DIR /usr/local/share/pcl_ros/cmake)
 find_package(catkin REQUIRED COMPONENTS
 airsim_ros
 message_generation
@@ -28,6 +29,8 @@ tf2_geometry_msgs
 image_transport
 OpenCV
 cv_bridge
+pcl_ros
+pcl_conversions
 )
 
 catkin_package(
