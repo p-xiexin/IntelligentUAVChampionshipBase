@@ -45,8 +45,8 @@
 在主机工作目录下会出现 test.tar 文件，该文件即为可提交镜像  
 ### 注意:  
 1. 服务器会在外部随机分配ip给容器，不能在镜像中的启动文件中提供 *ROS_IP* 和 *ROS_MASTER_URI* 这两个环境变量，否则服务器与容器将无法连接     
-2. 镜像中的程序应在镜像启动后自动开启  
-3. 镜像程序不允许使用GUI(X11等)功能，程序案例中的GUI程序仅供调试使用  
+2. 镜像中的程序应在镜像启动后自动开启    
+3. 镜像程序不允许使用GUI(X11等)功能        
 
 
 ## 5. 程序案例
@@ -62,52 +62,35 @@
 `./run_basic_dev.sh`  
 >当看到如下图，说明容器启动成功，程序可接受到模拟器传出的数据
 ![pic](./docs/1.png)
-----
-### 位置控制固定路线巡航(pos_ctrl)
-#### 简介
-该镜像实现了基于速度控制接口的PD控制器。程序会控制无人机沿着一个固定椭圆路径飞行
-#### 使用说明
->进入文件目录    
-`cd /path/to/IntelligentUAVChampionshipBase/pos_ctrl`  
->构建镜像   
-`docker build -t pos_ctrl .`  
->启动docker镜像   
-`./run_posctrl.sh`  
->当看到如下图，说明容器启动成功，front_left窗口展示无人机的左相机视角，终端中展示无人机的实时位姿，目标位姿与实时速度指令
-![pic](./docs/2.png)
-![pic](./docs/3.png)
 
-## 6. ros数据交互
-![pic](./docs/5.png)   
+## ros数据交互  
 >用于获取数据的可订阅的主题  
->+ 下视相机   
-`/airsim_node/drone_1/bottom_center/Scene`  
->+ 双目左rgb图  
-`/airsim_node/drone_1/front_left/Scene`
->+ 双目右rgb图    
+>+ 前视相机   
+`/airsim_node/drone_1/front_left/Scene`  
 `/airsim_node/drone_1/front_right/Scene`
+>+ 后视相机  
+`/airsim_node/drone_1/back_left/Scene`  
+`/airsim_node/drone_1/back_right/Scene`  
 >+ imu数据  
 `/airsim_node/drone_1/imu/imu`
+>+ 雷达数据  
+`/airsim_node/drone_1/lidar`
 >+ 无人机状态真值  
-`/airsim_node/drone_1/debug/pose_gt`
->+ gps数据  
-`/airsim_node/drone_1/pose`
->+ 障碍圈位姿真值  
-`/airsim_node/drone_1/debug/circle_poses_gt`  
->+ 障碍圈参考位姿    
-`/airsim_node/drone_1/circle_poses`  
->+ 赛道中生成的树的真实位置  
-`/airsim_node/drone_1/debug/tree_poses_gt`
+`/airsim_node/drone_1/debug/pose_gt`  
+>+ gps数据(含带误差姿态)  
+`/airsim_node/drone_1/gps`  
 >+ 电机输入PWM信号(0:右前, 1:左后, 2:左前, 3:右后)  
-`/airsim_node/drone_1/rotor_pwm`  
-----
+`/airsim_node/drone_1/debug/rotor_pwm`  
+>+ 起始位姿  
+`/airsim_node/initial_pose`  
+>+ 终点位置  
+`/airsim_node/end_goal`  
+---- 
 >用于发送指令的主题
->+ 姿态控制  
-`/airsim_node/drone_1/pose_cmd_body_frame` 
->+ 速度控制   
+>+ 速度控制  
 `/airsim_node/drone_1/vel_cmd_body_frame`
->+ 角速度推力控制  
-`/airsim_node/drone_1/angle_rate_throttle_frame`
+>+ PWM控制(0:右前, 1:左后, 2:左前, 3:右后)  
+`/airsim_node/drone_1/rotor_pwm_cmd`
 ----
 >可用服务   
 >+ 起飞   
@@ -119,6 +102,18 @@
 ### 注意:   
 服务器仅开放规则手册中提及的话题,其余话题仅供调试程序使用。
 
-
+## 系统相关参数
+> 无人机系统参数  
+>+ 质量 0.9kg    
+>+ 轴距（电机至机体中心）0.18米  
+>+ 转动惯量 Ixx 0.0046890742, Iyy 0.0069312, Izz 0.010421166  
+>+ 电机升力系数 0.000367717  
+>+ 电机反扭力系数 4.888486266072161e-06  
+>+ 最大转速 11079.03 转每分钟  
+----
+> 标定板参数
+>+ 行数（内点）8  
+>+ 列数（内点）11  
+>+ 方块边长 0.06 米  
 
 
