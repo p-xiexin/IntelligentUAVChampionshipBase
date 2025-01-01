@@ -1,0 +1,8 @@
+<launch>
+	<node name="vins_fusion" pkg="vins"  type="vins_node" output="screen" args="$(find vins)/../config/rmua.yaml"/>
+
+	<!-- <node name="loop_fusion" pkg="loop_fusion"  type="loop_fusion_node" args="$(find vins)/../config/rmua.yaml" output="screen"/> -->
+	<node name="rvizvisualisation" pkg="rviz"  type="rviz" output="screen" args="-d $(find vins)/../config/vins_rviz_config.rviz"/>
+
+	<node name="basic_dev" pkg="basic_dev"  type="basic_dev" output="log"/>
+</launch>

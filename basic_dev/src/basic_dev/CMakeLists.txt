@@ -44,6 +44,9 @@ include_directories(include ${catkin_INCLUDE_DIRS}  ${OpenCv_INCLUDE_DIRS})
 add_executable(basic_dev src/basic_dev.cpp )
 target_link_libraries(basic_dev ${catkin_LIBRARIES} ${OpenCv_LIBS})
 
+add_executable(hovering_example src/hovering_example.cpp )
+target_link_libraries(hovering_example ${catkin_LIBRARIES} ${OpenCv_LIBS})
+
 install(DIRECTORY
   launch
   DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}

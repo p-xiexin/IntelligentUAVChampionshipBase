@@ -12,7 +12,7 @@
 #include "nav_msgs/Odometry.h"
 #include "geometry_msgs/PoseStamped.h"
 #include "sensor_msgs/PointCloud2.h"
-#include  "sensor_msgs/Imu.h"
+#include "sensor_msgs/Imu.h"
 #include <time.h>
 #include <stdlib.h>
 #include "Eigen/Dense"
@@ -23,6 +23,7 @@
 #include <tf2_geometry_msgs/tf2_geometry_msgs.h>
 #include <pcl_conversions/pcl_conversions.h>
 #include "airsim_ros/RotorPWM.h"
+#include <nav_msgs/Path.h>
 #endif
 
 class BasicDev
@@ -60,6 +61,10 @@ private:
     //通过publisher实现对无人机的控制
     ros::Publisher vel_publisher;
     ros::Publisher pwm_publisher;
+
+    //发布无人机真实轨迹
+    nav_msgs::Path path_msg;
+    ros::Publisher path_pub;
 
     void pose_cb(const geometry_msgs::PoseStamped::ConstPtr& msg);
     void gps_cb(const geometry_msgs::PoseStamped::ConstPtr& msg);

@@ -2,6 +2,8 @@
 #define _BASIC_DEV_CPP_
 
 #include "basic_dev.hpp"
+#include "geometry_msgs/PoseStamped.h"
+#include "nav_msgs/Path.h"
 
 int main(int argc, char** argv)
 {
@@ -47,6 +49,7 @@ BasicDev::BasicDev(ros::NodeHandle *nh)
     //通过publisher实现对无人机的控制
     vel_publisher = nh->advertise<airsim_ros::VelCmd>("airsim_node/drone_1/vel_cmd_body_frame", 1);
     pwm_publisher = nh->advertise<airsim_ros::RotorPWM>("airsim_node/drone_1/rotor_pwm_cmd", 1);
+    path_pub = nh->advertise<nav_msgs::Path>("airsim_node/drone_1/real_path", 10);
     
     // takeoff_client.call(takeoff); //起飞
     // land_client.call(land); //降落
@@ -65,6 +68,23 @@ void BasicDev::pose_cb(const geometry_msgs::PoseStamped::ConstPtr& msg)
     Eigen::Vector3d eulerAngle = q.matrix().eulerAngles(2,1,0);
     ROS_INFO("Get pose data. time: %f, eulerangle: %f, %f, %f, posi: %f, %f, %f\n", msg->header.stamp.sec + msg->header.stamp.nsec*1e-9,
         eulerAngle[0], eulerAngle[1], eulerAngle[2], msg->pose.position.x, msg->pose.position.y, msg->pose.position.z);
+
+    static bool init = false;
+    static geometry_msgs::PoseStamped init_pose;
+    if(!init)
+    {
+        init_pose = *msg;
+        init = true;
+    }
+    geometry_msgs::PoseStamped pose = *msg;
+    path_msg.header.frame_id = "world";  // Example: Ensure this is a valid frame.
+    path_msg.header.stamp = msg->header.stamp;
+    pose.pose.position.x -= init_pose.pose.position.x;
+    pose.pose.position.y -= init_pose.pose.position.y;
+    pose.pose.position.z -= init_pose.pose.position.z;
+    pose.pose.position.z = -pose.pose.position.z;
+    path_msg.poses.push_back(pose);
+    path_pub.publish(path_msg);
 }
 
 void BasicDev::gps_cb(const geometry_msgs::PoseStamped::ConstPtr& msg)

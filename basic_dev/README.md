@@ -4,11 +4,42 @@
 
 [microsoft/AirSim: Open source simulator for autonomous vehicles built on Unreal Engine / Unity, from Microsoft AI & Research](https://github.com/microsoft/AirSim)
 
-[代码结构 - AirSim](https://microsoft.github.io/AirSim/code_structure/)
+[microsoft.com/en-us/research/wp-content/uploads/2017/02/aerial-informatics-robotics.pdf](https://www.microsoft.com/en-us/research/wp-content/uploads/2017/02/aerial-informatics-robotics.pdf)
+
+[Home - AirSim](https://microsoft.github.io/AirSim/)
+
+* [ ] 旋翼无人机控制器
+
+* [x] 发布消息控制无人机（键盘操控，以方便后面测试）
+
+  ```bash
+  rosrun remote_control teleop_twist_node
+  ```
+
+  w/s z轴升降， a/d 航向角，上/下 x轴移动，左/右 y轴移动
+
+* [ ] imu内参标定
+
+* [x] VINS_Fusion移植
+
+  里面添加了basic_dev节点，作用是将无人机真实位姿（geometry_msgs::PoseStamped）转化为路径（nav_msgs::Path）通过rviz可视化查看
+
+  ```bash
+  roslaunch vins rmua.launch
+  ```
+
+* [ ] 双目RGB -> 深度图
+### 旋翼无人机控制器
+
+#### se3 控制器
 
 > 问题：
 >
-> [How to convert rotor velocity to PWM and constant units · Issue #2592 · microsoft/AirSim](https://github.com/microsoft/AirSim/issues/2592)
+> [How to convert rotor velocity to PWM and constant units · Issue #2592 · microsoft/AirSim](https://github.com/microsoft/AirSim/issues/2592)、
+>
+> [AirSim(16) - 合力、合力矩到电机控制的转换(2022.3.18写) - 知乎](https://zhuanlan.zhihu.com/p/483137491)
+>
+> 根据`setting.json`，仿真器服务自带的飞控使用的是`airsim`自带的[SimpleFlight](https://github.com/microsoft/AirSim/tree/main/AirLib/include/vehicles/multirotor/firmwares/simple_flight)飞控
 >
 > 无法利用升力系数和反扭力系数，因此无法使用se3、mpc之类的控制器，只能考虑传统pid控制器：
 >
@@ -17,9 +48,37 @@
 >
 > 解决方案：**考虑直接移植px4控制器**
 
-根据`setting.json`，仿真器服务自带的飞控使用的是`airsim`自带的[SimpleFlight](https://github.com/microsoft/AirSim/tree/main/AirLib/include/vehicles/multirotor/firmwares/simple_flight)飞控
+```matlab
+clc;
 
-* [ ] 旋翼无人机控制器（下一步考虑移植PX4控制器）
+% 常量定义
+d = 0.18;                   % 轴距 (m)
+m = 0.9;                    % 质量 (kg)
+max_rpm = 11079.03;         % 旋翼最大转速 (r/min)
+c_t = 0.000367717;          % 升力系数 (N·s^2/m^2)
+c_q = 4.888486266072161e-06; % 反扭力系数 (N·m·s^2/rpm^2)
+I = diag([0.0046890742, 0.0069312, 0.010421166]); % 转动惯量 (kg·m^2)
+
+g = 9.81;                   % 重力加速度 (m/s^2)
+
+% 转速换算
+max_rps = max_rpm / 60;     % 最大转速 (r/s)
+max_rad = max_rps * 2 * pi; % 最大角速度 (rad/s)
+
+% 悬停时的电机转速（归一化值）
+pwm = 0.17806102335453033; % 悬停时电机转速归一化值
+
+% 计算推力
+trust = pwm * max_rps^2 * c_t * 4; % 总推力 (N)
+
+% 输出结果
+fprintf('总推力: %.2f N\n', trust);
+```
+
+$$
+F_i=C_T\omega_{max}^2u_i\\
+\tau_i=C_{Q}\omega_{max}^2u_i.
+$$
 
   - run（未测试，pwm貌似并不对应rotors转速，不能使用se3控制器）
 
@@ -34,21 +93,123 @@
     roslaunch rotors_control rmua.launch
     ```
     
-  
-* [ ] 发布消息控制无人机（键盘操控，以方便后面测试）
 
-  ```bash
-  rostopic pub /airsim_node/drone_1/vel_cmd_body_frame airsim_ros/VelCmd "twist:
-    linear:
-      x: 0
-      y: 0
-      z: 0
-    angular:
-      x: 0
-      y: 0
-      z: 0"
-  ```
+#### px4ctrl
 
-* [ ] 相机内外参标定，考虑使用VINS_Fusion
-* [ ] 
+[控制器图解 | PX4 Guide (main)](https://docs.px4.io/main/zh/flight_stack/controller_diagrams.html)
+
+[控制分配 (混控) | PX4 Guide (main)](https://docs.px4.io/main/zh/concept/control_allocation.html)
+
+[利用视觉或运动捕捉系统进行位置估计 | PX4 Guide (main)](https://docs.px4.io/main/zh/ros/external_position_estimation.html)
+
+![image-20250101163458156](./res/image-20250101163458156.png)
+
+**(1) px4ctrl 作为外环控制器**
+
+- `px4ctrl` 通常作为一个高层次控制器（外环位置控制器），计算较高级的控制目标（位置 -> 速度）。
+- PX4 固件中的控制器（内环姿态控制器）继续负责底层控制任务（角速度、姿态控制）。
+- 这种模式下，`px4ctrl` 会通过通信协议（如 MAVLink 或 ROS）向 PX4 固件发送期望的目标值，例如期望的速度或位置。
+
+**(2) px4ctrl 完全接管控制**
+
+- `px4ctrl` 可以直接生成底层控制指令（如电机速度或姿态），绕过 PX4 固件中的控制器。
+- 在这种模式下，PX4 固件的内环控制器会被停用或不参与控制。
+
+### 键盘控制节点
+
+[AirSim无人机键盘控制-CSDN博客](https://blog.csdn.net/lihuanl/article/details/122802219)
+
+1. 速度控制消息
+
+   ```bash
+   rostopic pub /airsim_node/drone_1/vel_cmd_body_frame airsim_ros/VelCmd "twist:
+     linear:
+       x: 0
+       y: 0
+       z: 0
+     angular:
+       x: 0
+       y: 0
+       z: 0"
+   ```
+
+
+
+### VINS_Fusion
+
+以左前方相机为例，根据``setting.json`:
+
+```json
+    "front_left":{
+       "CaptureSettings":[
+          {
+             "ImageType":0,
+             "Width": 960,
+             "Height":720,
+             "FOV_Degrees":60,
+             "TargetGamma":1
+          }
+       ],
+       "X": 0.175,
+    "Y": -0.15,
+    "Z": 0,
+       "Pitch":0,
+       "Roll":0,
+       "Yaw":0
+    },
+```
+
+#### **相机内参**
+
+1. **焦距（`f_x`, `f_y`）**
+   $$
+   f_x = f_y = \frac{\text{Width}}{2 \cdot \tan\left(\frac{\text{FOV}}{2}\right)}
+   $$
+   
+2. **主点（`c_x`, `c_y`）**
+     $$
+     c_x = \frac{\text{Width}}{2}, \quad c_y = \frac{\text{Height}}{2}
+     $$
+     
+3. **内参矩阵 $K$**
+
+$$
+K = 
+     \begin{bmatrix}
+     f_x & 0 & c_x \\
+     0 & f_y & c_y \\
+     0 & 0 & 1
+     \end{bmatrix}
+$$
+
+​	
+
+```yaml
+projection_parameters:
+   fx: 831.3843876
+   fy: 831.3843876
+   cx: 480.0
+   cy: 360.0
+```
+
+  4. **畸变参数**
+
+     在 AirSim 的配置文件中，畸变参数通常是通过 `NoiseSettings` 中的具体配置项来模拟相机噪声和失真效果的。然而，这些参数并不直接对应于传统相机模型中的径向和切向畸变参数（如 `k1, k2, k3` 和 `p1, p2`）。
+
+#### **相机外参**
+
+<img src="./res/image-20241221160634760.png" alt="image-20241221160634760" style="zoom:67%;" />
+
+```yaml
+body_T_cam0: !!opencv-matrix
+   rows: 4
+   cols: 4
+   dt: d
+   data: [0.0, 0.0, 1.0, 0.175,
+          1.0, 0.0, 0.0, -0.15,
+          0.0, 1.0, 0.0, 0.0,
+          0.0, 0.0, 0.0, 1.0]
+```
+
+#### IMU内参
 
