@@ -4,6 +4,7 @@
 #include "basic_dev.hpp"
 #include "geometry_msgs/PoseStamped.h"
 #include "nav_msgs/Path.h"
+#include <tf/transform_datatypes.h>
 
 int main(int argc, char** argv)
 {
@@ -76,14 +77,28 @@ void BasicDev::pose_cb(const geometry_msgs::PoseStamped::ConstPtr& msg)
         init_pose = *msg;
         init = true;
     }
-    geometry_msgs::PoseStamped pose = *msg;
-    path_msg.header.frame_id = "world";  // Example: Ensure this is a valid frame.
+    path_msg.header.frame_id = "world";
     path_msg.header.stamp = msg->header.stamp;
-    pose.pose.position.x -= init_pose.pose.position.x;
-    pose.pose.position.y -= init_pose.pose.position.y;
-    pose.pose.position.z -= init_pose.pose.position.z;
-    pose.pose.position.z = -pose.pose.position.z;
-    path_msg.poses.push_back(pose);
+
+    geometry_msgs::PoseStamped relative_pose;
+    geometry_msgs::PoseStamped target_pose = *msg;
+
+    relative_pose.pose.position.x = target_pose.pose.position.x - init_pose.pose.position.x;
+    relative_pose.pose.position.y = target_pose.pose.position.y - init_pose.pose.position.y;
+    relative_pose.pose.position.z = target_pose.pose.position.z - init_pose.pose.position.z;
+
+    // 计算旋转差值
+    tf::Quaternion init_q;
+    tf::quaternionMsgToTF(init_pose.pose.orientation, init_q);
+    tf::Matrix3x3 rotation_matrix(init_q);
+    tf::Vector3 position(relative_pose.pose.position.x, relative_pose.pose.position.y, relative_pose.pose.position.z);
+    tf::Vector3 rotated_position = rotation_matrix.inverse() * position;
+
+    relative_pose.pose.position.x = rotated_position.x();
+    relative_pose.pose.position.y = -rotated_position.y();
+    relative_pose.pose.position.z = -rotated_position.z();
+
+    path_msg.poses.push_back(relative_pose);
     path_pub.publish(path_msg);
 }
 

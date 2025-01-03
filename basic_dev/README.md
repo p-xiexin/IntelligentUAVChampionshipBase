@@ -76,8 +76,8 @@ fprintf('总推力: %.2f N\n', trust);
 ```
 
 $$
-F_i=C_T\omega_{max}^2u_i\\
-\tau_i=C_{Q}\omega_{max}^2u_i.
+F_i&=C_T\omega_{max}^2u_i \\
+\tau_i&=C_{Q}\omega_{max}^2u_i.
 $$
 
   - run（未测试，pwm貌似并不对应rotors转速，不能使用se3控制器）
@@ -136,6 +136,11 @@ $$
 
 
 ### VINS_Fusion
+
+> 1. IMU 频率只有100Hz
+> 2. 相机曝光过低，导致大量的黑色区域，图像特征提取困难
+>
+> ![image-20250103215443704](./res/image-20250103215443704.png)
 
 以左前方相机为例，根据``setting.json`:
 

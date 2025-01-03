@@ -18,12 +18,12 @@ output_path: "/home/pxx/vins_output"
 
 cam0_calib: "left.yaml"
 cam1_calib: "right.yaml"
-image_width: 640
-image_height: 480
+image_width: 960
+image_height: 720
    
 
 # Extrinsic parameter between IMU and Camera.
-estimate_extrinsic: 1   # 0  Have an accurate extrinsic parameters. We will trust the following imu^R_cam, imu^T_cam, don't change it.
+estimate_extrinsic: 0   # 0  Have an accurate extrinsic parameters. We will trust the following imu^R_cam, imu^T_cam, don't change it.
                         # 1  Have an initial guess about extrinsic parameters. We will optimize around your initial guess.
 
 body_T_cam0: !!opencv-matrix

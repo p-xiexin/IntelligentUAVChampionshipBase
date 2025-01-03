@@ -36,9 +36,9 @@ int main(int argc, char** argv)
 TeleopRmua::TeleopRmua(ros::NodeHandle &nh):
   nh_(nh),
   l_scale_x_(2.0),
-  l_scale_y_(2.0),
-  l_scale_z_(2.0),
-  a_scale_z_(2.0)
+  l_scale_y_(-2.0),
+  l_scale_z_(1.0),
+  a_scale_z_(1.0)
 {
   vel_publisher = nh_.advertise<airsim_ros::VelCmd>("airsim_node/drone_1/vel_cmd_body_frame", 1);
   timer_ = nh_.createTimer(ros::Duration(0.05), &TeleopRmua::TimedCallback, this, false, true);

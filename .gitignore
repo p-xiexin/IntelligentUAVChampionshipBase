@@ -1,0 +1,6 @@
+.vscode
+basic_dev/.vscode
+basic_dev/.cache
+basic_dev/devel
+basic_dev/build
+basic_dev/src/mav_comm
