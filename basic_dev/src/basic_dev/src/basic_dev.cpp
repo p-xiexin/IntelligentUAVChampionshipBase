@@ -3,8 +3,13 @@
 
 #include "basic_dev.hpp"
 #include "geometry_msgs/PoseStamped.h"
+#include "nav_msgs/Odometry.h"
 #include "nav_msgs/Path.h"
 #include <tf/transform_datatypes.h>
+
+nav_msgs::Path path_msg;
+nav_msgs::Odometry slam_init_pose;
+bool slam_init = false;
 
 int main(int argc, char** argv)
 {
@@ -51,6 +56,9 @@ BasicDev::BasicDev(ros::NodeHandle *nh)
     vel_publisher = nh->advertise<airsim_ros::VelCmd>("airsim_node/drone_1/vel_cmd_body_frame", 1);
     pwm_publisher = nh->advertise<airsim_ros::RotorPWM>("airsim_node/drone_1/rotor_pwm_cmd", 1);
     path_pub = nh->advertise<nav_msgs::Path>("airsim_node/drone_1/real_path", 10);
+    // slam 初始化坐标
+    // slaminit_sub = nh->subscribe<nav_msgs::Odometry>("aft_mapped_to_init", 1, std::bind(&BasicDev::slaminit_cb, this, std::placeholders::_1));
+    slaminit_sub = nh->subscribe<nav_msgs::Odometry>("/vins_fusion/odometry", 1, std::bind(&BasicDev::slaminit_cb, this, std::placeholders::_1));
     
     // takeoff_client.call(takeoff); //起飞
     // land_client.call(land); //降落
@@ -77,29 +85,36 @@ void BasicDev::pose_cb(const geometry_msgs::PoseStamped::ConstPtr& msg)
         init_pose = *msg;
         init = true;
     }
-    path_msg.header.frame_id = "world";
-    path_msg.header.stamp = msg->header.stamp;
 
-    geometry_msgs::PoseStamped relative_pose;
-    geometry_msgs::PoseStamped target_pose = *msg;
+    if(init && slam_init)
+    {
+        // path_msg.header.frame_id = "camera_init";
+        path_msg.header.frame_id = "world";
+        path_msg.header.stamp = msg->header.stamp;
 
-    relative_pose.pose.position.x = target_pose.pose.position.x - init_pose.pose.position.x;
-    relative_pose.pose.position.y = target_pose.pose.position.y - init_pose.pose.position.y;
-    relative_pose.pose.position.z = target_pose.pose.position.z - init_pose.pose.position.z;
+        geometry_msgs::PoseStamped relative_pose;
+        geometry_msgs::PoseStamped target_pose = *msg;
 
-    // 计算旋转差值
-    tf::Quaternion init_q;
-    tf::quaternionMsgToTF(init_pose.pose.orientation, init_q);
-    tf::Matrix3x3 rotation_matrix(init_q);
-    tf::Vector3 position(relative_pose.pose.position.x, relative_pose.pose.position.y, relative_pose.pose.position.z);
-    tf::Vector3 rotated_position = rotation_matrix.inverse() * position;
+        relative_pose.pose.position.x = target_pose.pose.position.x - init_pose.pose.position.x;
+        relative_pose.pose.position.y = target_pose.pose.position.y - init_pose.pose.position.y;
+        relative_pose.pose.position.z = target_pose.pose.position.z - init_pose.pose.position.z;
 
-    relative_pose.pose.position.x = rotated_position.x();
-    relative_pose.pose.position.y = -rotated_position.y();
-    relative_pose.pose.position.z = -rotated_position.z();
+        // 计算旋转差值
+        tf::Quaternion init_q, slaminit_q;
+        tf::quaternionMsgToTF(init_pose.pose.orientation, init_q);
+        tf::quaternionMsgToTF(slam_init_pose.pose.pose.orientation, slaminit_q);
+        tf::Quaternion q_diff = slaminit_q * init_q.inverse();
+        tf::Matrix3x3 rotation_matrix(q_diff);
+        tf::Vector3 position(relative_pose.pose.position.x, relative_pose.pose.position.y, relative_pose.pose.position.z);
+        tf::Vector3 rotated_position = rotation_matrix.inverse() * position;
 
-    path_msg.poses.push_back(relative_pose);
-    path_pub.publish(path_msg);
+        relative_pose.pose.position.x = rotated_position.x();
+        relative_pose.pose.position.y = rotated_position.y();
+        relative_pose.pose.position.z = rotated_position.z();
+
+        path_msg.poses.push_back(relative_pose);
+        path_pub.publish(path_msg);
+    }
 }
 
 void BasicDev::gps_cb(const geometry_msgs::PoseStamped::ConstPtr& msg)
@@ -139,5 +154,15 @@ void BasicDev::lidar_cb(const sensor_msgs::PointCloud2::ConstPtr& msg)
     pcl::fromROSMsg(*msg, *pts);
     ROS_INFO("Get lidar data. time: %f, size: %ld", msg->header.stamp.sec + msg->header.stamp.nsec*1e-9, pts->size());
 }
+
+void BasicDev::slaminit_cb(const nav_msgs::Odometry::ConstPtr& msg)
+{
+    if(!slam_init)
+    {
+        slam_init_pose = *msg;
+        slam_init = true;
+    }
+}
+
 
 #endif

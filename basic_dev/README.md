@@ -20,11 +20,19 @@
 
 * [ ] imu内参标定
 
+* [x] Point_LIO移植
+
+  ```bash
+  # 需要安装Livox-SDK Livox_ros_driver
+  roslaunch point_lio mapping_rmua.launch
+  ```
+
 * [x] VINS_Fusion移植
 
   里面添加了basic_dev节点，作用是将无人机真实位姿（geometry_msgs::PoseStamped）转化为路径（nav_msgs::Path）通过rviz可视化查看
 
   ```bash
+  # 需要安装ceres_solver
   roslaunch vins rmua.launch
   ```
 
@@ -133,11 +141,21 @@ $$
        z: 0"
    ```
 
+### SLAM
 
-
-### VINS_Fusion
+#### VINS_Fusion
 
 > 1. IMU 频率只有100Hz
+>
+>    ```bash
+>    $ rostopic hz /airsim_node/drone_1/imu/imu
+>    subscribed to [/airsim_node/drone_1/imu/imu]
+>    average rate: 99.962
+>            min: 0.010s max: 0.011s std dev: 0.00025s window: 100
+>    average rate: 99.987
+>            min: 0.009s max: 0.011s std dev: 0.00025s window: 200
+>    ```
+>
 > 2. 相机曝光过低，导致大量的黑色区域，图像特征提取困难
 >
 > ![image-20250103215443704](./res/image-20250103215443704.png)
@@ -164,7 +182,7 @@ $$
     },
 ```
 
-#### **相机内参**
+##### **相机内参**
 
 1. **焦距（`f_x`, `f_y`）**
    $$
@@ -201,7 +219,7 @@ projection_parameters:
 
      在 AirSim 的配置文件中，畸变参数通常是通过 `NoiseSettings` 中的具体配置项来模拟相机噪声和失真效果的。然而，这些参数并不直接对应于传统相机模型中的径向和切向畸变参数（如 `k1, k2, k3` 和 `p1, p2`）。
 
-#### **相机外参**
+##### **相机外参**
 
 <img src="./res/image-20241221160634760.png" alt="image-20241221160634760" style="zoom:67%;" />
 
@@ -216,5 +234,36 @@ body_T_cam0: !!opencv-matrix
           0.0, 0.0, 0.0, 1.0]
 ```
 
-#### IMU内参
+##### IMU内参
+
+
+
+#### Point_LIO
+
+[hku-mars/Point-LIO](https://github.com/hku-mars/Point-LIO)
+
+![image-20250108132731350](./res/image-20250108132731350.png)
+
+```json
+"lidar": {
+    "SensorType": 6,                 // 传感器类型。6 代表激光雷达传感器。
+    "Enabled": true,                 // 是否启用激光雷达。设置为 true 启用传感器，false 则禁用。
+    "NumberOfChannels": 32,          // 激光雷达的通道数，表示激光雷达发射激光束的数量。
+    "RotationsPerSecond": 10,        // 激光雷达每秒旋转的次数。10 代表每秒旋转 10 次。
+    "PointsPerSecond": 200000,       // 激光雷达每秒生成的点云数量。200,000 点每秒表示高密度的点云数据。
+    "X": 0,                          // 激光雷达传感器在 X 轴上的位置偏移。
+    "Y": 0,                          // 激光雷达传感器在 Y 轴上的位置偏移。
+    "Z": -0.05,                      // 激光雷达传感器在 Z 轴上的位置偏移。
+    "Roll": 0,                       // 激光雷达传感器绕 X 轴的旋转角度（滚转角度）。
+    "Pitch": 0,                      // 激光雷达传感器绕 Y 轴的旋转角度（俯仰角度）。
+    "Yaw": 0,                        // 激光雷达传感器绕 Z 轴的旋转角度（偏航角度）。
+    "VerticalFOVUpper": 52,          // 激光雷达的垂直视场角上限。单位是度，表示激光雷达的上视角度范围（从水平面向上）。
+    "VerticalFOVLower": -7,          // 激光雷达的垂直视场角下限。单位是度，表示激光雷达的下视角度范围（从水平面向下）。
+    "HorizontalFOVStart": -180,      // 激光雷达的水平视场角起始位置。单位是度，-180 表示从地面左侧开始。
+    "HorizontalFOVEnd": 180,         // 激光雷达的水平视场角结束位置。单位是度，180 表示地面右侧。
+    "DrawDebugPoints": false,        // 是否在调试模式下绘制激光雷达的点云数据。设置为 true 会在模拟界面中显示点云。
+    "DataFrame": "SensorLocalFrame", // 数据坐标系的参考框架。一般为 "SensorLocalFrame"，表示以传感器坐标系为参考。
+    "Range": 30                      // 激光雷达的最大测量范围。单位是米，30 表示激光雷达的最大有效探测距离为 30 米。
+}
+```
 

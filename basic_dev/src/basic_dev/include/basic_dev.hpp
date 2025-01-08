@@ -63,8 +63,10 @@ private:
     ros::Publisher pwm_publisher;
 
     //发布无人机真实轨迹
-    nav_msgs::Path path_msg;
     ros::Publisher path_pub;
+
+    //slam系统初始化位姿
+    ros::Subscriber slaminit_sub;
 
     void pose_cb(const geometry_msgs::PoseStamped::ConstPtr& msg);
     void gps_cb(const geometry_msgs::PoseStamped::ConstPtr& msg);
@@ -74,6 +76,7 @@ private:
     void front_left_view_cb(const sensor_msgs::ImageConstPtr& msg);
     void front_right_view_cb(const sensor_msgs::ImageConstPtr& msg);
 
+    void slaminit_cb(const nav_msgs::Odometry::ConstPtr& msg);
 
 public:
     BasicDev(ros::NodeHandle *nh);
