@@ -8,8 +8,18 @@
 
 [Home - AirSim](https://microsoft.github.io/AirSim/)
 
-* [ ] 旋翼无人机控制器
-
+* [x] 旋翼无人机控制器
+	```bash
+   cd WORKSPACE_NAME/src
+   git clone git@github.com:ethz-asl/mav_comm.git
+   
+   cd WORKSPACE_NAME
+   catkin_make -DCMAKE_BUILD_TYPE=Release -DCMAKE_EXPORT_COMPILE_COMMANDS=Yes 
+   
+   source ./devel/setup.sh
+	roslaunch rotors_control rmua_control_test.launch
+	```
+* [ ] EKF传感器融合
 * [x] 发布消息控制无人机（键盘操控，以方便后面测试）
 
   ```bash
@@ -18,12 +28,12 @@
 
   w/s z轴升降， a/d 航向角，上/下 x轴移动，左/右 y轴移动
 
-* [ ] imu内参标定
+* [x] imu内参标定
 
 * [x] Point_LIO移植
 
   ```bash
-  # 需要安装Livox-SDK Livox_ros_driver
+  # 需要安装Livox-SDK livox_ros_driver
   roslaunch point_lio mapping_rmua.launch
   ```
 
@@ -35,26 +45,22 @@
   # 需要安装ceres_solver
   roslaunch vins rmua.launch
   ```
-
 * [ ] 双目RGB -> 深度图
 ### 旋翼无人机控制器
 
 #### se3 控制器
 
-> 问题：
->
-> [How to convert rotor velocity to PWM and constant units · Issue #2592 · microsoft/AirSim](https://github.com/microsoft/AirSim/issues/2592)、
->
-> [AirSim(16) - 合力、合力矩到电机控制的转换(2022.3.18写) - 知乎](https://zhuanlan.zhihu.com/p/483137491)
->
-> 根据`setting.json`，仿真器服务自带的飞控使用的是`airsim`自带的[SimpleFlight](https://github.com/microsoft/AirSim/tree/main/AirLib/include/vehicles/multirotor/firmwares/simple_flight)飞控
->
-> 无法利用升力系数和反扭力系数，因此无法使用se3、mpc之类的控制器，只能考虑传统pid控制器：
->
-> 1. 需要已知空气密度和螺旋桨直径，但是并未提供
-> 2. airsim可以通过python的相关api查询以上参数，但是DJI貌似关闭了airsim相关接口
->
-> 解决方案：**考虑直接移植px4控制器**
+
+[How to convert rotor velocity to PWM and constant units · Issue #2592 · microsoft/AirSim](https://github.com/microsoft/AirSim/issues/2592)
+
+[AirSim(16) - 合力、合力矩到电机控制的转换(2022.3.18写) - 知乎](https://zhuanlan.zhihu.com/p/483137491)
+
+$$
+F_i=C_T\omega_{max}^2u_i \\
+\tau_i=C_{Q}\omega_{max}^2u_i.
+$$
+
+
 
 ```matlab
 clc;
@@ -83,30 +89,12 @@ trust = pwm * max_rps^2 * c_t * 4; % 总推力 (N)
 fprintf('总推力: %.2f N\n', trust);
 ```
 
-$$
-F_i&=C_T\omega_{max}^2u_i \\
-\tau_i&=C_{Q}\omega_{max}^2u_i.
-$$
-
-  - run（未测试，pwm貌似并不对应rotors转速，不能使用se3控制器）
-
-    ```bash
-    cd WORKSPACE_NAME/src
-    git clone git@github.com:ethz-asl/mav_comm.git
     
-    cd WORKSPACE_NAME
-    catkin_make -DCMAKE_BUILD_TYPE=Release -DCMAKE_EXPORT_COMPILE_COMMANDS=Yes 
-    
-    source ./devel/setup.sh
-    roslaunch rotors_control rmua.launch
-    ```
-    
-
 #### px4ctrl
 
 [控制器图解 | PX4 Guide (main)](https://docs.px4.io/main/zh/flight_stack/controller_diagrams.html)
 
-[控制分配 (混控) | PX4 Guide (main)](https://docs.px4.io/main/zh/concept/control_allocation.html)
+[Offboard 模式 | PX4 Guide (main)](https://docs.px4.io/main/zh/flight_modes/offboard)
 
 [利用视觉或运动捕捉系统进行位置估计 | PX4 Guide (main)](https://docs.px4.io/main/zh/ros/external_position_estimation.html)
 
@@ -122,6 +110,12 @@ $$
 
 - `px4ctrl` 可以直接生成底层控制指令（如电机速度或姿态），绕过 PX4 固件中的控制器。
 - 在这种模式下，PX4 固件的内环控制器会被停用或不参与控制。
+
+#### EKF状态估计器
+
+[无人机 PX4 飞控 | EKF 使用传感器汇总与添加传感器方法_px4 ekf-CSDN博客](https://blog.csdn.net/qq_32761549/article/details/141218627)
+
+[PX4飞控中利用EKF估计姿态角代码详解-CSDN博客](https://blog.csdn.net/lizilpl/article/details/45542907)
 
 ### 键盘控制节点
 
@@ -236,6 +230,43 @@ body_T_cam0: !!opencv-matrix
 
 ##### IMU内参
 
+[IMU噪声模型与标定：理论与实践-CSDN博客](https://blog.csdn.net/weixin_42681311/article/details/126109617)
+
+```yaml
+%YAML:1.0
+---
+type: IMU
+name: airsim
+Gyr:
+   unit: " rad/s"
+   avg-axis:
+      gyr_n: 1.7740269167702946e-03
+      gyr_w: 1.3782706867714904e-05
+   x-axis:
+      gyr_n: 1.7527648456287569e-03
+      gyr_w: 1.2749944270619166e-05
+   y-axis:
+      gyr_n: 1.7814803131937006e-03
+      gyr_w: 1.4324135736079974e-05
+   z-axis:
+      gyr_n: 1.7878355914884259e-03
+      gyr_w: 1.4274040596445567e-05
+Acc:
+   unit: " m/s^2"
+   avg-axis:
+      acc_n: 4.7947667093816371e-02
+      acc_w: 2.8562889763953406e-04
+   x-axis:
+      acc_n: 4.7017608683122596e-02
+      acc_w: 2.0657015214584510e-04
+   y-axis:
+      acc_n: 4.8597221140189273e-02
+      acc_w: 3.2225042410795573e-04
+   z-axis:
+      acc_n: 4.8228171458137237e-02
+      acc_w: 3.2806611666480126e-04
+```
+
 
 
 #### Point_LIO
@@ -267,3 +298,13 @@ body_T_cam0: !!opencv-matrix
 }
 ```
 
+```bash
+Failed to find match for field 't'.
+Failed to find match for field 'reflectivity'.
+Failed to find match for field 'ring'.
+Failed to find match for field 'ambient'.
+Failed to find match for field 'range'.
+Failed to find match for field 'intensity'.
+```
+
+`point_lio`包的设计目标之一是实现高频率的里程计发布，通常能够达到4kHz到8kHz的频率。Airsim仿真环境中LiDAR传感器的一帧数据包中的激光点扫描时间是一致的，即所有激光点的时间戳是相同的。这种行为虽然在某些情况下是合理的，但在高频率更新的系统中，实际上不应如此。现实环境中，每个激光点的扫描时间应有所不同，以反映出激光雷达传感器在扫描过程中可能发生的微小时间偏差。由于这一时间一致性，`point_lio`中的里程计更新频率被迫受到限制，无法达到预计的高频率。

@@ -35,11 +35,12 @@ int main(int argc, char** argv) {
     }
   }
 
-  if (!initial_pose_received) {
+  if (initial_pose_received) {
     geometry_msgs::PoseStamped posecmd_msg;
     posecmd_msg = initial_pose;
     posecmd_msg.header.stamp = ros::Time::now();
     posecmd_msg.pose.position.z -= 1.5; // The positive direction of the Z-axis is downward.
+    posecmd_msg.pose.position.y += 1;
     posecmd_msg.pose.orientation = tf::createQuaternionMsgFromYaw(0);
 
     ROS_INFO("Publishing waypoint on namespace %s: [%f, %f, %f].",

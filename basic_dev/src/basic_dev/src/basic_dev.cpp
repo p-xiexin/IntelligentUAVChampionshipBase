@@ -57,8 +57,8 @@ BasicDev::BasicDev(ros::NodeHandle *nh)
     pwm_publisher = nh->advertise<airsim_ros::RotorPWM>("airsim_node/drone_1/rotor_pwm_cmd", 1);
     path_pub = nh->advertise<nav_msgs::Path>("airsim_node/drone_1/real_path", 10);
     // slam 初始化坐标
-    // slaminit_sub = nh->subscribe<nav_msgs::Odometry>("aft_mapped_to_init", 1, std::bind(&BasicDev::slaminit_cb, this, std::placeholders::_1));
-    slaminit_sub = nh->subscribe<nav_msgs::Odometry>("/vins_fusion/odometry", 1, std::bind(&BasicDev::slaminit_cb, this, std::placeholders::_1));
+    slaminit_sub = nh->subscribe<nav_msgs::Odometry>("aft_mapped_to_init", 1, std::bind(&BasicDev::slaminit_cb, this, std::placeholders::_1));
+    // slaminit_sub = nh->subscribe<nav_msgs::Odometry>("/vins_fusion/odometry", 1, std::bind(&BasicDev::slaminit_cb, this, std::placeholders::_1));
     
     // takeoff_client.call(takeoff); //起飞
     // land_client.call(land); //降落
@@ -88,8 +88,8 @@ void BasicDev::pose_cb(const geometry_msgs::PoseStamped::ConstPtr& msg)
 
     if(init && slam_init)
     {
-        // path_msg.header.frame_id = "camera_init";
-        path_msg.header.frame_id = "world";
+        path_msg.header.frame_id = "camera_init";
+        // path_msg.header.frame_id = "world";
         path_msg.header.stamp = msg->header.stamp;
 
         geometry_msgs::PoseStamped relative_pose;
