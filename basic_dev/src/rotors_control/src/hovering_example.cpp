@@ -21,7 +21,7 @@ int main(int argc, char** argv) {
   ROS_INFO("Take Off. waiting for initial_pose");
 
   // Wait for 5 seconds to let the Airsim Run.
-  ros::Duration(5.0).sleep();
+  ros::Duration(3.0).sleep();
 
   // Wait until the initial pose is received
   ros::Time start_time = ros::Time::now();
@@ -40,7 +40,8 @@ int main(int argc, char** argv) {
     posecmd_msg = initial_pose;
     posecmd_msg.header.stamp = ros::Time::now();
     posecmd_msg.pose.position.z -= 1.5; // The positive direction of the Z-axis is downward.
-    posecmd_msg.pose.position.y += 1;
+    // posecmd_msg.pose.position.y += 1;
+    // posecmd_msg.pose.position.x += 1;
     posecmd_msg.pose.orientation = tf::createQuaternionMsgFromYaw(0);
 
     ROS_INFO("Publishing waypoint on namespace %s: [%f, %f, %f].",

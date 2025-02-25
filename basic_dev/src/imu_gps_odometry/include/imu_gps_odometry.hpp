@@ -13,13 +13,17 @@
 #include <random>
 #include <mutex>
 #include "eskf.hpp"
+#include <tf2_ros/transform_broadcaster.h>
+#include <tf2_geometry_msgs/tf2_geometry_msgs.h>
 
-std::random_device rd{};
-std::mt19937 gen{rd()};
-std::normal_distribution<double> gauss_dist{0.0, 1.0};
+// std::random_device rd{};
+// std::mt19937 gen{rd()};
+// std::normal_distribution<double> gauss_dist{0.0, 1.0};
 ErrorStateKalmanFilter* g_eskf_ptr;
-int odo_cnt = 0;
+// int odo_cnt = 0;
 ros::Publisher g_eskf_odom_puber;
 void odom_local_ned_cb(const geometry_msgs::PoseStamped::ConstPtr& msg);
 void init_pose_ned_cb(const geometry_msgs::PoseStamped::ConstPtr& msg);
 void imu_cb(const sensor_msgs::Imu::ConstPtr& msg);
+void posegt_cb(const geometry_msgs::PoseStamped::ConstPtr& msg);
+void slam_cb(const nav_msgs::Odometry::ConstPtr& msg);

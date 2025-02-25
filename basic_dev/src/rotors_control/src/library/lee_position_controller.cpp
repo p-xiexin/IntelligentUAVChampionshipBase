@@ -102,7 +102,8 @@ void LeePositionController::ComputeDesiredAcceleration(Eigen::Vector3d* accelera
 
   // Transform velocity to world frame.
   const Eigen::Matrix3d R_W_I = odometry_.orientation.toRotationMatrix();
-  Eigen::Vector3d velocity_W =  R_W_I * odometry_.velocity;
+  // Eigen::Vector3d velocity_W =  R_W_I * odometry_.velocity;
+  Eigen::Vector3d velocity_W =  odometry_.velocity;
   Eigen::Vector3d velocity_error;
   velocity_error = velocity_W - command_trajectory_.velocity_W;
 
